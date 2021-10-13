@@ -4,6 +4,7 @@ import { Page, reducer } from "./reducer";
 import { pdfjs } from "react-pdf/dist/esm/entry.webpack";
 import SelectorBar from "./components/SelectorBar";
 import PageViewer from "./components/PageViewer";
+import ChunkViewer from "./components/ChunkViewer";
 const { ipcRenderer } = window.require("electron");
 
 function App() {
@@ -47,13 +48,31 @@ function App() {
     })();
   }, []);
   return (
-    <div>
-      <h1>
+    <div
+      style={{
+        height: "100%",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <div>
         Print Different <button onClick={chooseFile}>pick file</button>{" "}
-      </h1>
-      <p>{state.loading && "loading..."}</p>
-      <SelectorBar state={state} dispatch={dispatch} />
-      <PageViewer state={state} dispatch={dispatch} />
+      </div>
+      {state.loading && <p>loading...</p>}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          padding: "1em",
+          overflow: "hidden",
+          flex: 1,
+        }}
+      >
+        <SelectorBar state={state} dispatch={dispatch} />
+        <PageViewer state={state} dispatch={dispatch} />
+        <ChunkViewer state={state} dispatch={dispatch} />
+      </div>
     </div>
   );
 }

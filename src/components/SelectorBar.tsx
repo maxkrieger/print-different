@@ -21,11 +21,11 @@ const SelectorBar = ({
     return null;
   }
   return (
-    <div>
+    <div style={{ height: "100%", overflow: "auto" }}>
       {state.doc.pages.map((page, k) => (
         <div
           style={{
-            display: "inline-block",
+            display: "block",
             cursor: "pointer",
             border: `${k === state.doc!.currentPage ? 2 : 0}px solid orange`,
           }}

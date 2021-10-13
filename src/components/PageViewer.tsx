@@ -165,7 +165,11 @@ const PageViewer = ({
   }
   const currentPage = state.doc.pages[state.doc.currentPage];
   return (
-    <div onMouseMove={onDragChunk} onMouseUp={doneDragging}>
+    <div
+      onMouseMove={onDragChunk}
+      onMouseUp={doneDragging}
+      style={{ flex: 1, height: "100%", overflow: "auto" }}
+    >
       <svg
         viewBox={`0 0 ${currentPage.width} ${currentPage.height}`}
         ref={svgNode}
