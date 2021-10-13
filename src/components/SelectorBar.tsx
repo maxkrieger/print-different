@@ -24,7 +24,11 @@ const SelectorBar = ({
     <div>
       {state.doc.pages.map((page, k) => (
         <div
-          style={{ display: "inline-block", cursor: "pointer" }}
+          style={{
+            display: "inline-block",
+            cursor: "pointer",
+            border: `${k === state.doc!.currentPage ? 2 : 0}px solid orange`,
+          }}
           key={k}
           onClick={() => onPageClick(k)}
         >

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Dispatch, IState } from "../reducer";
+import { chunkCoordsToImage, Dispatch, IState } from "../reducer";
 
 enum ChunkState {
   None,
@@ -9,7 +9,6 @@ enum ChunkState {
   SW,
   Move,
 }
-// TODO: listen to key press
 
 const PageViewer = ({
   state,
@@ -19,7 +18,7 @@ const PageViewer = ({
   dispatch: Dispatch;
 }) => {
   const svgNode = useRef<SVGSVGElement | null>(null);
-  const [currentChunk, setCurrentChunk] = useState<number | null>(null);
+  const currentChunk = useRef<number | null>(null);
   const [dragMode, setDragMode] = useState<ChunkState>(ChunkState.None);
   const [initialCoords, setInitialCoords] = useState<[number, number]>([0, 0]);
   const [offset, setOffset] = useState<[number, number]>([0, 0]);
@@ -37,11 +36,11 @@ const PageViewer = ({
   );
   const onDragChunk = useCallback(
     ({ clientX, clientY }) => {
-      if (currentChunk === null || dragMode === ChunkState.None) {
+      if (currentChunk.current === null || dragMode === ChunkState.None) {
         return;
       }
       const currentPage = state.doc!.pages[state.doc!.currentPage];
-      const currentChunkData = currentPage.chunks[currentChunk];
+      const currentChunkData = currentPage.chunks[currentChunk.current];
       const [x, y] = fixCoords(clientX, clientY);
       const chunk = { ...currentChunkData };
 
@@ -64,7 +63,7 @@ const PageViewer = ({
       }
       dispatch({
         kind: "update_chunk",
-        index: currentChunk,
+        index: currentChunk.current,
         chunk,
       });
     },
@@ -73,15 +72,32 @@ const PageViewer = ({
   const doneDragging = useCallback(() => {
     setDragMode(ChunkState.None);
     dispatch({ kind: "cleanup_empty_boxes" });
-  }, [dispatch]);
+    if (currentChunk.current !== null) {
+      (async () => {
+        const newChunk = {
+          ...state.doc!.pages[state.doc!.currentPage].chunks[
+            currentChunk.current!
+          ],
+        };
+        newChunk.image = await chunkCoordsToImage(
+          newChunk,
+          state.doc!.pages[state.doc!.currentPage]
+        );
+        dispatch({
+          kind: "update_chunk",
+          chunk: newChunk,
+          index: currentChunk.current!,
+        });
+      })();
+    }
+  }, [dispatch, state]);
   const onDragExistingChunk = useCallback(
     (chunkIndex: number, { clientX, clientY }) => {
-      const currentChunk =
-        state.doc!.pages[state.doc!.currentPage].chunks[chunkIndex];
-      setCurrentChunk(chunkIndex);
+      const chunk = state.doc!.pages[state.doc!.currentPage].chunks[chunkIndex];
+      currentChunk.current = chunkIndex;
       setDragMode(ChunkState.Move);
       const [x, y] = fixCoords(clientX, clientY);
-      setOffset([x - currentChunk.x, y - currentChunk.y]);
+      setOffset([x - chunk.x, y - chunk.y]);
     },
     [fixCoords, state]
   );
@@ -90,7 +106,7 @@ const PageViewer = ({
     ({ clientX, clientY }) => {
       const currentPage = state.doc!.pages[state.doc!.currentPage];
       const [x, y] = fixCoords(clientX, clientY);
-      setCurrentChunk(currentPage.chunks.length);
+      currentChunk.current = currentPage.chunks.length;
       setInitialCoords([x, y]);
       dispatch({
         kind: "add_chunk",
@@ -99,6 +115,7 @@ const PageViewer = ({
           y: y,
           w: 0,
           h: 0,
+          image: "",
         },
       });
       setDragMode(ChunkState.SE);
@@ -107,19 +124,16 @@ const PageViewer = ({
   );
   const onResizeExistingChunk = useCallback(
     (direction: ChunkState, k: number, e) => {
-      const currentChunk = state.doc!.pages[state.doc!.currentPage].chunks[k];
-      setCurrentChunk(k);
+      const chunk = state.doc!.pages[state.doc!.currentPage].chunks[k];
+      currentChunk.current = k;
       if (direction === ChunkState.SE) {
-        setInitialCoords([currentChunk.x, currentChunk.y]);
+        setInitialCoords([chunk.x, chunk.y]);
       } else if (direction === ChunkState.NW) {
-        setInitialCoords([
-          currentChunk.x + currentChunk.w,
-          currentChunk.y + currentChunk.h,
-        ]);
+        setInitialCoords([chunk.x + chunk.w, chunk.y + chunk.h]);
       } else if (direction === ChunkState.SW) {
-        setInitialCoords([currentChunk.x + currentChunk.w, currentChunk.y]);
+        setInitialCoords([chunk.x + chunk.w, chunk.y]);
       } else if (direction === ChunkState.NE) {
-        setInitialCoords([currentChunk.x, currentChunk.y + currentChunk.h]);
+        setInitialCoords([chunk.x, chunk.y + chunk.h]);
       }
       setDragMode(direction);
     },
@@ -128,13 +142,13 @@ const PageViewer = ({
   const onKey = useCallback(
     (e) => {
       if (e.key === "Escape") {
-        setCurrentChunk(null);
+        currentChunk.current = null;
         doneDragging();
       } else if (e.key === "Delete" || e.key === "Backspace") {
-        if (currentChunk !== null) {
-          dispatch({ kind: "delete_chunk", index: currentChunk });
+        if (currentChunk.current !== null) {
+          dispatch({ kind: "delete_chunk", index: currentChunk.current });
         }
-        setCurrentChunk(null);
+        currentChunk.current = null;
         doneDragging();
       }
     },
@@ -173,11 +187,11 @@ const PageViewer = ({
               fillOpacity={0.5}
               stroke={"orange"}
               strokeOpacity={0.8}
-              strokeWidth={currentChunk === k ? 4 : 0}
+              strokeWidth={currentChunk.current === k ? 4 : 0}
               onMouseDown={(e) => onDragExistingChunk(k, e)}
               style={{ cursor: "grab" }}
             />
-            {currentChunk === k && (
+            {currentChunk.current === k && (
               <>
                 <rect
                   style={{ cursor: "nw-resize" }}

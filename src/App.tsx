@@ -31,7 +31,7 @@ function App() {
             viewport: viewport,
           }).promise;
           pages.push({
-            image: canvas.toDataURL(),
+            image: canvas.toDataURL("image/png"),
             width: viewport.width,
             height: viewport.height,
             chunks: [],

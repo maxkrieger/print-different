@@ -6,6 +6,7 @@ export type Chunk = {
   y: number;
   w: number;
   h: number;
+  image: string;
 };
 
 export type Page = {
@@ -37,6 +38,32 @@ export type Action =
   | { kind: "update_chunk"; chunk: Chunk; index: number }
   | { kind: "cleanup_empty_boxes" }
   | { kind: "delete_chunk"; index: number };
+
+const b64ToImage = (b64: string) => {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.src = b64;
+    image.onload = function () {
+      resolve(image);
+    };
+    image.onerror = function () {
+      reject(this);
+    };
+  });
+};
+
+export const chunkCoordsToImage = async (
+  chunk: Chunk,
+  page: Page
+): Promise<string> => {
+  const canvas = document.createElement("canvas");
+  canvas.width = chunk.w;
+  canvas.height = chunk.h;
+  const ctx = canvas.getContext("2d");
+  const img = await b64ToImage(page.image);
+  ctx?.drawImage(img, -chunk.x, -chunk.y, img.width, img.height);
+  return canvas.toDataURL("image/png");
+};
 
 export type Dispatch = React.Dispatch<Action>;
 
