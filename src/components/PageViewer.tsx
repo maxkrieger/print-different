@@ -4,6 +4,9 @@ import { Dispatch, IState } from "../reducer";
 enum ChunkState {
   None,
   SE,
+  NW,
+  NE,
+  SW,
   Move,
 }
 
@@ -40,7 +43,11 @@ const PageViewer = ({
       const currentChunkData = currentPage.chunks[currentChunk];
       const [x, y] = fixCoords(clientX, clientY);
       const chunk = { ...currentChunkData };
-      if (dragMode === ChunkState.SE) {
+
+      if (dragMode === ChunkState.Move) {
+        chunk.x = x - offset[0];
+        chunk.y = y - offset[1];
+      } else {
         const corners = [
           [x, y],
           [initialCoords[0], initialCoords[1]],
@@ -48,13 +55,11 @@ const PageViewer = ({
           [initialCoords[0], y],
         ];
         corners.sort((a, b) => a[0] + a[1] - (b[0] + b[1]));
+
         chunk.x = corners[0][0];
         chunk.y = corners[0][1];
         chunk.w = corners[3][0] - corners[0][0];
         chunk.h = corners[3][1] - corners[0][1];
-      } else if (dragMode === ChunkState.Move) {
-        chunk.x = x - offset[0];
-        chunk.y = y - offset[1];
       }
       dispatch({
         kind: "update_chunk",
@@ -104,7 +109,18 @@ const PageViewer = ({
     (direction: ChunkState, k: number, e) => {
       const currentChunk = state.doc!.pages[state.doc!.currentPage].chunks[k];
       setCurrentChunk(k);
-      setInitialCoords([currentChunk.x, currentChunk.y]);
+      if (direction === ChunkState.SE) {
+        setInitialCoords([currentChunk.x, currentChunk.y]);
+      } else if (direction === ChunkState.NW) {
+        setInitialCoords([
+          currentChunk.x + currentChunk.w,
+          currentChunk.y + currentChunk.h,
+        ]);
+      } else if (direction === ChunkState.SW) {
+        setInitialCoords([currentChunk.x + currentChunk.w, currentChunk.y]);
+      } else if (direction === ChunkState.NE) {
+        setInitialCoords([currentChunk.x, currentChunk.y + currentChunk.h]);
+      }
       setDragMode(direction);
     },
     [state]
@@ -141,16 +157,56 @@ const PageViewer = ({
               style={{ cursor: "grab" }}
             />
             {currentChunk === k && (
-              <rect
-                style={{ cursor: "se-resize" }}
-                x={chunk.x + chunk.w - 8}
-                y={chunk.y + chunk.h - 8}
-                onMouseDown={(e) => onResizeExistingChunk(ChunkState.SE, k, e)}
-                width={16}
-                height={16}
-                fill={"white"}
-                stroke="black"
-              />
+              <>
+                <rect
+                  style={{ cursor: "nw-resize" }}
+                  x={chunk.x - 8}
+                  y={chunk.y - 8}
+                  onMouseDown={(e) =>
+                    onResizeExistingChunk(ChunkState.NW, k, e)
+                  }
+                  width={16}
+                  height={16}
+                  fill={"white"}
+                  stroke="black"
+                />
+                <rect
+                  style={{ cursor: "ne-resize" }}
+                  x={chunk.x + chunk.w - 8}
+                  y={chunk.y - 8}
+                  onMouseDown={(e) =>
+                    onResizeExistingChunk(ChunkState.NE, k, e)
+                  }
+                  width={16}
+                  height={16}
+                  fill={"white"}
+                  stroke="black"
+                />
+                <rect
+                  style={{ cursor: "sw-resize" }}
+                  x={chunk.x - 8}
+                  y={chunk.y + chunk.h - 8}
+                  onMouseDown={(e) =>
+                    onResizeExistingChunk(ChunkState.SW, k, e)
+                  }
+                  width={16}
+                  height={16}
+                  fill={"white"}
+                  stroke="black"
+                />
+                <rect
+                  style={{ cursor: "se-resize" }}
+                  x={chunk.x + chunk.w - 8}
+                  y={chunk.y + chunk.h - 8}
+                  onMouseDown={(e) =>
+                    onResizeExistingChunk(ChunkState.SE, k, e)
+                  }
+                  width={16}
+                  height={16}
+                  fill={"white"}
+                  stroke="black"
+                />
+              </>
             )}
           </g>
         ))}
