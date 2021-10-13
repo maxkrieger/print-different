@@ -10,17 +10,22 @@
     "@types/node": "^12.0.0",
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
+    "pdf-lib": "^1.16.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
+    "react-pdf": "^5.4.0",
     "react-scripts": "4.0.3",
     "typescript": "^4.1.2",
     "web-vitals": "^1.0.1"
   },
+  "main": "public/electron.js",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "dev": "concurrently -k \"BROWSER=none yarn start\" \"npm:electron\"",
+    "electron": "wait-on tcp:3000 && electron ."
   },
   "eslintConfig": {
     "extends": [
@@ -39,5 +44,13 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@types/react-pdf": "^5.0.7",
+    "concurrently": "^6.3.0",
+    "electron": "^15.1.2",
+    "electron-builder": "^22.13.1",
+    "electron-is-dev": "^2.0.0",
+    "wait-on": "^6.0.0"
   }
 }
