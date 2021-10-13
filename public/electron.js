@@ -6,6 +6,7 @@ const isDev = require("electron-is-dev");
 ipcMain.handle("pick-file", async (event, arg) => {
   const fileResponse = await dialog.showOpenDialog({
     properties: ["openFile"],
+    filters: [{ name: "PDFs", extensions: ["pdf"] }],
   });
   if (fileResponse.canceled || fileResponse.filePaths.length === 0) {
     return;

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Dispatch, IState } from "../reducer";
 
 enum ChunkState {
@@ -9,6 +9,7 @@ enum ChunkState {
   SW,
   Move,
 }
+// TODO: listen to key press
 
 const PageViewer = ({
   state,
@@ -71,9 +72,8 @@ const PageViewer = ({
   );
   const doneDragging = useCallback(() => {
     setDragMode(ChunkState.None);
-    window.removeEventListener("mouseup", doneDragging);
-    window.removeEventListener("mousemove", onDragChunk);
-  }, [onDragChunk]);
+    dispatch({ kind: "cleanup_empty_boxes" });
+  }, [dispatch]);
   const onDragExistingChunk = useCallback(
     (chunkIndex: number, { clientX, clientY }) => {
       const currentChunk =
@@ -125,6 +125,27 @@ const PageViewer = ({
     },
     [state]
   );
+  const onKey = useCallback(
+    (e) => {
+      if (e.key === "Escape") {
+        setCurrentChunk(null);
+        doneDragging();
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        if (currentChunk !== null) {
+          dispatch({ kind: "delete_chunk", index: currentChunk });
+        }
+        setCurrentChunk(null);
+        doneDragging();
+      }
+    },
+    [doneDragging, currentChunk, dispatch]
+  );
+  useEffect(() => {
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onKey]);
   if (!state.doc || state.doc.pages.length <= state.doc.currentPage) {
     return null;
   }
