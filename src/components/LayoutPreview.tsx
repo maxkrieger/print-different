@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import download from "downloadjs";
+import { useCallback, useEffect, useState } from "react";
+import { Document, Page, Outline } from "react-pdf/dist/esm/entry.webpack";
 import { Dispatch, generateLayout, IState, Layout } from "../reducer";
 
 const LayoutPreview = ({
@@ -9,24 +11,51 @@ const LayoutPreview = ({
   dispatch: Dispatch;
 }) => {
   const [layout, setLayout] = useState<null | Layout>(null);
-  const [pdfStr, setPdfStr] = useState<string>("");
+  const [pdfBytes, setPdfBytes] = useState<Uint8Array>(new Uint8Array());
   useEffect(() => {
     (async () => {
       const result = await generateLayout(state.doc!);
       setLayout(result);
-      const pdfBytes = await result.document.saveAsBase64({ dataUri: true });
-      setPdfStr(pdfBytes);
+      const bytes = await result.document.save();
+      setPdfBytes(bytes);
     })();
   }, [state]);
+  const onDownloadClick = useCallback(() => {
+    (async () => {
+      download(pdfBytes, "layout.pdf", "application/pdf");
+    })();
+  }, [pdfBytes]);
+
+  const [pageNumber, setPageNumber] = useState(1);
   return (
     <div style={{ flex: 1 }}>
-      {pdfStr === "" && "loading..."}
-      {pdfStr !== "" && (
-        <iframe
-          title="pdf"
-          src={pdfStr}
-          style={{ width: "100%", height: "100%" }}
-        />
+      {layout === null && "loading..."}
+      <button onClick={onDownloadClick}>download</button>
+      {layout && (
+        <>
+          <div style={{ zIndex: 1000 }}>
+            <button
+              disabled={pageNumber === 1}
+              onClick={() => setPageNumber((n) => n - 1)}
+            >
+              {"<"}
+            </button>
+            <span>
+              page {pageNumber} of {layout.document.getPageCount()}
+            </span>
+            <button
+              disabled={pageNumber === layout.document.getPageCount()}
+              onClick={() => setPageNumber((n) => n + 1)}
+            >
+              {">"}
+            </button>
+          </div>
+          <div style={{ overflow: "hidden" }}>
+            <Document file={{ data: pdfBytes, name: "layout.pdf" }}>
+              <Page pageNumber={pageNumber} />
+            </Document>
+          </div>
+        </>
       )}
     </div>
   );

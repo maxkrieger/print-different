@@ -160,6 +160,9 @@ const PageViewer = ({
       window.removeEventListener("keydown", onKey);
     };
   }, [onKey]);
+  useEffect(() => {
+    currentChunk.current = null;
+  }, [state.doc?.currentPage]);
   if (!state.doc || state.doc.pages.length <= state.doc.currentPage) {
     return null;
   }

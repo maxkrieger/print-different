@@ -101,7 +101,22 @@ export const flattenChunks = (doc: Doc): PositionedChunk[] =>
     )
     .flat();
 
+/**
+ * https://stackoverflow.com/a/14731922/10833799
+ */
+function calculateAspectRatioFit(
+  srcWidth: number,
+  srcHeight: number,
+  maxWidth: number,
+  maxHeight: number
+) {
+  var ratio = Math.min(maxWidth / srcWidth, maxHeight / srcHeight);
+
+  return { width: srcWidth * ratio, height: srcHeight * ratio };
+}
+
 const PADDING = 20;
+const PER_PAGE = 2;
 export const generateLayout = async (doc: Doc): Promise<Layout> => {
   const exportedPdf = await PDFDocument.create();
   const importedPdf = doc.pdfDocument;
@@ -109,25 +124,36 @@ export const generateLayout = async (doc: Doc): Promise<Layout> => {
   let page = exportedPdf.addPage(PageSizes.Letter);
   for (var i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
-    if (i % 4 === 0 && i !== 0) {
+    if (i % PER_PAGE === 0 && i !== 0) {
       page = exportedPdf.addPage(PageSizes.Letter);
     }
-    chunk.w = page.getWidth() / 2 - PADDING * 2;
-    const ratio = chunk.chunk.h / chunk.chunk.w;
-    chunk.h = chunk.w * ratio;
-    chunk.x = i % 2 === 0 ? PADDING : page.getWidth() / 2 + PADDING;
-    chunk.y = i % 4 < 2 ? page.getHeight() - chunk.h - PADDING : PADDING;
+    const oldH = chunk.chunk.h / 2;
+    const oldW = chunk.chunk.w / 2;
+    const oldX = chunk.chunk.x / 2;
+    const oldY = chunk.chunk.y / 2;
+    const { width, height } = calculateAspectRatioFit(
+      oldW,
+      oldH,
+      page.getWidth() - PADDING * 2,
+      page.getHeight() / 2 - PADDING * 2
+    );
+    chunk.h = height;
+    chunk.w = width;
+    chunk.x = PADDING;
+    chunk.y =
+      i % PER_PAGE < PER_PAGE / 2
+        ? page.getHeight() - chunk.h - PADDING
+        : PADDING;
     const sourcePage = importedPdf.getPage(chunk.page);
     const clipBox = {
-      left: chunk.chunk.x,
-      right: chunk.chunk.x + chunk.chunk.w,
-      bottom: sourcePage.getHeight() - (chunk.chunk.y + chunk.chunk.h),
-      top: sourcePage.getHeight() - chunk.chunk.y,
+      left: oldX,
+      right: oldX + oldW,
+      bottom: sourcePage.getHeight() - (oldY + oldH),
+      top: sourcePage.getHeight() - oldY,
     };
     const embedded = await exportedPdf.embedPage(sourcePage, clipBox);
 
     page.drawPage(embedded, {
-      //   rotate: { angle: 270, type: RotationTypes.Degrees },
       width: chunk.w,
       height: chunk.h,
       x: chunk.x,

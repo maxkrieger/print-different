@@ -1,6 +1,6 @@
 import { PDFDocument } from "pdf-lib";
 import { useCallback, useReducer } from "react";
-import { Action, Dispatch, IState, Page, PageState, reducer } from "./reducer";
+import { Action, IState, Page, PageState, reducer } from "./reducer";
 import { pdfjs } from "react-pdf/dist/esm/entry.webpack";
 import SelectorBar from "./components/SelectorBar";
 import PageViewer from "./components/PageViewer";
@@ -26,7 +26,7 @@ function App() {
         const pages: Page[] = [];
         for (let i = 0; i < pdf.numPages; i++) {
           const page = await pdf.getPage(i + 1);
-          const viewport = page.getViewport({ scale: 1 });
+          const viewport = page.getViewport({ scale: 2 });
           const context = canvas.getContext("2d");
           canvas.height = viewport.height;
           canvas.width = viewport.width;
