@@ -1,5 +1,12 @@
-import { PageSizes, PDFDocument, RotationTypes } from "pdf-lib";
+import {
+  PageSizes,
+  PDFDocument,
+  rgb,
+  RotationTypes,
+  StandardFonts,
+} from "pdf-lib";
 import React from "react";
+import ShelfPack from "@mapbox/shelf-pack";
 
 export type Chunk = {
   x: number;
@@ -28,7 +35,9 @@ export type PositionedChunk = {
   y: number;
   w: number;
   h: number;
+  name: string;
   page: number;
+  new_page: number;
 };
 export type Layout = {
   positionedChunks: PositionedChunk[];
@@ -89,61 +98,85 @@ export type Dispatch = React.Dispatch<Action>;
 
 export const flattenChunks = (doc: Doc): PositionedChunk[] =>
   doc.pages
-    .map((page, idx) =>
-      page.chunks.map((chunk) => ({
+    .map((page, idx) => {
+      const chunks = page.chunks.slice();
+      chunks.sort((a, b) => a.x + a.y - (b.x + b.y));
+      return chunks.map((chunk, idx2) => ({
         page: idx,
+        new_page: 0,
+        name: `${idx}.${idx2}`,
         x: 0,
         y: 0,
         w: chunk.w,
         h: chunk.h,
         chunk,
-      }))
-    )
+      }));
+    })
     .flat();
 
-/**
- * https://stackoverflow.com/a/14731922/10833799
- */
-function calculateAspectRatioFit(
-  srcWidth: number,
-  srcHeight: number,
-  maxWidth: number,
-  maxHeight: number
-) {
-  var ratio = Math.min(maxWidth / srcWidth, maxHeight / srcHeight);
-
-  return { width: srcWidth * ratio, height: srcHeight * ratio };
-}
+export const PAGE_SIZE = PageSizes.Letter;
+const packBins = (chunks: PositionedChunk[]): PositionedChunk[] => {
+  const pageShelves = [new ShelfPack(PAGE_SIZE[0], PAGE_SIZE[1])];
+  for (var i = 0; i < chunks.length; i++) {
+    let j = 0;
+    let found = false;
+    chunks[i].w = chunks[i].chunk.w;
+    chunks[i].h = chunks[i].chunk.h;
+    while (j < pageShelves.length && !found) {
+      const bin = pageShelves[j].packOne(
+        chunks[i].w + PADDING,
+        chunks[i].h + PADDING,
+        i
+      );
+      if (bin !== null) {
+        chunks[i].x = bin.x;
+        chunks[i].y = PAGE_SIZE[1] - bin.y - bin.h;
+        chunks[i].new_page = j;
+        found = true;
+      } else {
+        j++;
+      }
+    }
+    if (!found) {
+      pageShelves.push(new ShelfPack(PAGE_SIZE[0], PAGE_SIZE[1]));
+      let properSize = false;
+      while (!properSize) {
+        const bin = pageShelves[pageShelves.length - 1].packOne(
+          chunks[i].w + PADDING,
+          chunks[i].h + PADDING,
+          i
+        );
+        if (bin) {
+          chunks[i].x = bin.x;
+          chunks[i].y = PAGE_SIZE[1] - bin.y - bin.h;
+          properSize = true;
+        } else {
+          chunks[i].w *= 0.8;
+          chunks[i].h *= 0.8;
+        }
+      }
+      chunks[i].new_page = pageShelves.length - 1;
+    }
+  }
+  chunks.sort((a, b) => a.new_page - b.new_page);
+  return chunks;
+};
 
 const PADDING = 20;
-const PER_PAGE = 2;
 export const generateLayout = async (doc: Doc): Promise<Layout> => {
   const exportedPdf = await PDFDocument.create();
+  const font = exportedPdf.embedStandardFont(StandardFonts.HelveticaBold);
   const importedPdf = doc.pdfDocument;
-  const chunks = flattenChunks(doc);
-  let page = exportedPdf.addPage(PageSizes.Letter);
+  const chunks = packBins(flattenChunks(doc));
+
+  let page = exportedPdf.addPage(PAGE_SIZE);
+  let page_idx = 0;
   for (var i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
-    if (i % PER_PAGE === 0 && i !== 0) {
-      page = exportedPdf.addPage(PageSizes.Letter);
-    }
     const oldH = chunk.chunk.h / 2;
     const oldW = chunk.chunk.w / 2;
     const oldX = chunk.chunk.x / 2;
     const oldY = chunk.chunk.y / 2;
-    const { width, height } = calculateAspectRatioFit(
-      oldW,
-      oldH,
-      page.getWidth() - PADDING * 2,
-      page.getHeight() / 2 - PADDING * 2
-    );
-    chunk.h = height;
-    chunk.w = width;
-    chunk.x = PADDING;
-    chunk.y =
-      i % PER_PAGE < PER_PAGE / 2
-        ? page.getHeight() - chunk.h - PADDING
-        : PADDING;
     const sourcePage = importedPdf.getPage(chunk.page);
     const clipBox = {
       left: oldX,
@@ -152,12 +185,30 @@ export const generateLayout = async (doc: Doc): Promise<Layout> => {
       top: sourcePage.getHeight() - oldY,
     };
     const embedded = await exportedPdf.embedPage(sourcePage, clipBox);
+    if (page_idx < chunk.new_page) {
+      page = exportedPdf.addPage(PAGE_SIZE);
+      page_idx++;
+    }
 
     page.drawPage(embedded, {
       width: chunk.w,
       height: chunk.h,
       x: chunk.x,
       y: chunk.y,
+    });
+    page.drawRectangle({
+      x: chunk.x + chunk.w,
+      y: chunk.y,
+      width: 5 * chunk.name.length,
+      height: 12,
+      color: rgb(0.95, 0.95, 0.95),
+    });
+    page.drawText(chunk.name, {
+      x: chunk.x + chunk.w,
+      y: chunk.y,
+      font,
+      size: 12,
+      color: rgb(0.4, 0.4, 0.4),
     });
   }
   return { positionedChunks: chunks, document: exportedPdf };

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@mapbox/shelf-pack": "^3.2.0",
     "@testing-library/jest-dom": "^5.11.4",
     "@testing-library/react": "^11.1.0",
     "@testing-library/user-event": "^12.1.10",
@@ -48,6 +49,7 @@
   },
   "devDependencies": {
     "@types/downloadjs": "^1.4.2",
+    "@types/mapbox__shelf-pack": "^3.0.1",
     "@types/react-pdf": "^5.0.7",
     "concurrently": "^6.3.0",
     "electron": "^15.1.2",

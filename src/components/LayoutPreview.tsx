@@ -1,7 +1,13 @@
 import download from "downloadjs";
 import { useCallback, useEffect, useState } from "react";
-import { Document, Page, Outline } from "react-pdf/dist/esm/entry.webpack";
-import { Dispatch, generateLayout, IState, Layout } from "../reducer";
+import { Document, Page } from "react-pdf/dist/esm/entry.webpack";
+import {
+  Dispatch,
+  generateLayout,
+  IState,
+  Layout,
+  PAGE_SIZE,
+} from "../reducer";
 
 const LayoutPreview = ({
   state,
@@ -28,12 +34,12 @@ const LayoutPreview = ({
 
   const [pageNumber, setPageNumber] = useState(1);
   return (
-    <div style={{ flex: 1 }}>
+    <div style={{ flex: 1, overflow: "hidden" }}>
       {layout === null && "loading..."}
       <button onClick={onDownloadClick}>download</button>
       {layout && (
         <>
-          <div style={{ zIndex: 1000 }}>
+          <div>
             <button
               disabled={pageNumber === 1}
               onClick={() => setPageNumber((n) => n - 1)}
@@ -50,9 +56,23 @@ const LayoutPreview = ({
               {">"}
             </button>
           </div>
-          <div style={{ overflow: "hidden" }}>
-            <Document file={{ data: pdfBytes, name: "layout.pdf" }}>
-              <Page pageNumber={pageNumber} />
+          <div
+            style={{
+              overflow: "auto",
+              height: "100%",
+            }}
+          >
+            <Document
+              file={{ data: pdfBytes, name: "layout.pdf" }}
+              renderMode={"svg"}
+            >
+              <Page
+                pageNumber={pageNumber}
+                width={PAGE_SIZE[0]}
+                height={PAGE_SIZE[1]}
+                className={"preview_page"}
+                renderTextLayer={false}
+              />
             </Document>
           </div>
         </>
