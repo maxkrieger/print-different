@@ -9,6 +9,10 @@
   "private": true,
   "build": {
     "appId": "chat.saga.print",
+    "files": [
+      "build/**/*",
+      "!node_modules/**/*"
+    ],
     "productName": "Print Different",
     "mac": {
       "target": "zip",
