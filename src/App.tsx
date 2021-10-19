@@ -1,7 +1,12 @@
-import { PDFDocument } from "pdf-lib";
-import { useCallback, useReducer } from "react";
-import { Action, IState, Page, PageState, reducer } from "./reducer";
-import { pdfjs } from "react-pdf/dist/esm/entry.webpack";
+import { useCallback, useEffect, useReducer } from "react";
+import {
+  Action,
+  IState,
+  Page,
+  PageState,
+  processFile,
+  reducer,
+} from "./reducer";
 import SelectorBar from "./components/SelectorBar";
 import PageViewer from "./components/PageViewer";
 import ChunkViewer from "./components/ChunkViewer";
@@ -19,37 +24,15 @@ function App() {
     (async () => {
       const reply = await ipcRenderer.invoke("pick-file");
       if (reply) {
-        dispatch({ kind: "set_pagestate", state: PageState.Loading });
-        const pdfDocument = await PDFDocument.load(reply);
-        const pdf = await pdfjs.getDocument({ data: reply }).promise;
-        const canvas = document.createElement("canvas");
-        const pages: Page[] = [];
-        for (let i = 0; i < pdf.numPages; i++) {
-          const page = await pdf.getPage(i + 1);
-          const viewport = page.getViewport({ scale: 2 });
-          const context = canvas.getContext("2d");
-          canvas.height = viewport.height;
-          canvas.width = viewport.width;
-          await page.render({
-            canvasContext: context as any,
-            viewport: viewport,
-          }).promise;
-          pages.push({
-            image: canvas.toDataURL("image/png"),
-            width: viewport.width,
-            height: viewport.height,
-            chunks: [],
-          });
-        }
-        canvas.remove();
-        dispatch({
-          kind: "set_doc",
-          doc: { pdfDocument, pages, currentPage: 0 },
-        });
-        dispatch({ kind: "set_pagestate", state: PageState.Viewing });
+        processFile(reply, dispatch);
       }
     })();
-  }, []);
+  }, [dispatch]);
+  useEffect(() => {
+    ipcRenderer.on("file-chosen", (event: any, file: Buffer) => {
+      processFile(file, dispatch);
+    });
+  }, [dispatch]);
   return (
     <div
       style={{

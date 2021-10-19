@@ -1,24 +1,34 @@
 {
   "name": "print-different",
+  "author": {
+    "name": "Max Krieger"
+  },
+  "description": "Slice your pdfs up and spread em around",
+  "homepage": "./",
   "version": "0.1.0",
   "private": true,
+  "build": {
+    "appId": "chat.saga.print",
+    "productName": "Print Different",
+    "mac": {
+      "target": "zip",
+      "icon": "icon.png"
+    },
+    "linux": {
+      "target": "deb",
+      "icon": "icon.png"
+    }
+  },
   "dependencies": {
     "@mapbox/shelf-pack": "^3.2.0",
-    "@testing-library/jest-dom": "^5.11.4",
-    "@testing-library/react": "^11.1.0",
-    "@testing-library/user-event": "^12.1.10",
-    "@types/jest": "^26.0.15",
-    "@types/node": "^12.0.0",
-    "@types/react": "^17.0.0",
-    "@types/react-dom": "^17.0.0",
     "downloadjs": "^1.4.7",
     "pdf-lib": "^1.16.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-pdf": "^5.4.0",
     "react-scripts": "4.0.3",
-    "typescript": "^4.1.2",
-    "web-vitals": "^1.0.1"
+    "web-vitals": "^1.0.1",
+    "electron-is-dev": "^2.0.0"
   },
   "main": "public/electron.js",
   "scripts": {
@@ -27,7 +37,9 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "dev": "concurrently -k \"BROWSER=none yarn start\" \"npm:electron\"",
-    "electron": "wait-on tcp:3000 && electron ."
+    "electron": "wait-on tcp:3000 && electron .",
+    "pack": "electron-builder --dir",
+    "dist": "react-scripts build && electron-builder"
   },
   "eslintConfig": {
     "extends": [
@@ -37,14 +49,10 @@
   },
   "browserslist": {
     "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
+      "last 1 electron version"
     ],
     "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
+      "last 1 electron version"
     ]
   },
   "devDependencies": {
@@ -54,7 +62,14 @@
     "concurrently": "^6.3.0",
     "electron": "^15.1.2",
     "electron-builder": "^22.13.1",
-    "electron-is-dev": "^2.0.0",
-    "wait-on": "^6.0.0"
+    "wait-on": "^6.0.0",
+    "typescript": "^4.1.2",
+    "@types/jest": "^26.0.15",
+    "@types/node": "^12.0.0",
+    "@types/react": "^17.0.0",
+    "@types/react-dom": "^17.0.0",
+    "@testing-library/jest-dom": "^5.11.4",
+    "@testing-library/react": "^11.1.0",
+    "@testing-library/user-event": "^12.1.10"
   }
 }

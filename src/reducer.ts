@@ -1,10 +1,12 @@
 import {
+  Duplex,
   PageSizes,
   PDFDocument,
   rgb,
   RotationTypes,
   StandardFonts,
 } from "pdf-lib";
+import { pdfjs } from "react-pdf/dist/esm/entry.webpack";
 import React from "react";
 import ShelfPack from "@mapbox/shelf-pack";
 
@@ -67,6 +69,37 @@ export type Action =
   | { kind: "update_chunk"; chunk: Chunk; index: number }
   | { kind: "cleanup_empty_boxes" }
   | { kind: "delete_chunk"; index: number };
+
+export const processFile = async (fileBytes: Buffer, dispatch: Dispatch) => {
+  dispatch({ kind: "set_pagestate", state: PageState.Loading });
+  const pdfDocument = await PDFDocument.load(fileBytes);
+  const pdf = await pdfjs.getDocument({ data: fileBytes }).promise;
+  const canvas = document.createElement("canvas");
+  const pages: Page[] = [];
+  for (let i = 0; i < pdf.numPages; i++) {
+    const page = await pdf.getPage(i + 1);
+    const viewport = page.getViewport({ scale: 2 });
+    const context = canvas.getContext("2d");
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+    await page.render({
+      canvasContext: context as any,
+      viewport: viewport,
+    }).promise;
+    pages.push({
+      image: canvas.toDataURL("image/png"),
+      width: viewport.width,
+      height: viewport.height,
+      chunks: [],
+    });
+  }
+  canvas.remove();
+  dispatch({
+    kind: "set_doc",
+    doc: { pdfDocument, pages, currentPage: 0 },
+  });
+  dispatch({ kind: "set_pagestate", state: PageState.Viewing });
+};
 
 const b64ToImage = (b64: string) => {
   return new Promise<HTMLImageElement>((resolve, reject) => {
@@ -165,6 +198,8 @@ const packBins = (chunks: PositionedChunk[]): PositionedChunk[] => {
 const PADDING = 20;
 export const generateLayout = async (doc: Doc): Promise<Layout> => {
   const exportedPdf = await PDFDocument.create();
+  exportedPdf.catalog.getOrCreateViewerPreferences().setDuplex(Duplex.Simplex);
+  exportedPdf.setTitle(`Printing of ${doc.pdfDocument.getTitle()}`);
   const font = exportedPdf.embedStandardFont(StandardFonts.HelveticaBold);
   const importedPdf = doc.pdfDocument;
   const chunks = packBins(flattenChunks(doc));
@@ -189,7 +224,16 @@ export const generateLayout = async (doc: Doc): Promise<Layout> => {
       page = exportedPdf.addPage(PAGE_SIZE);
       page_idx++;
     }
-
+    page.drawRectangle({
+      x: chunk.x,
+      y: chunk.y,
+      width: chunk.w + 5 * chunk.name.length + PADDING,
+      height: chunk.h + PADDING,
+      opacity: 0,
+      borderOpacity: 1,
+      borderColor: rgb(0.5, 0.5, 0.5),
+      borderWidth: 1,
+    });
     page.drawPage(embedded, {
       width: chunk.w,
       height: chunk.h,
@@ -198,14 +242,14 @@ export const generateLayout = async (doc: Doc): Promise<Layout> => {
     });
     page.drawRectangle({
       x: chunk.x + chunk.w,
-      y: chunk.y,
+      y: chunk.y + 5,
       width: 5 * chunk.name.length,
       height: 12,
       color: rgb(0.95, 0.95, 0.95),
     });
     page.drawText(chunk.name, {
       x: chunk.x + chunk.w,
-      y: chunk.y,
+      y: chunk.y + 5,
       font,
       size: 12,
       color: rgb(0.4, 0.4, 0.4),

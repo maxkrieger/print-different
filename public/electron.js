@@ -2,6 +2,7 @@ const path = require("path");
 const fs = require("fs/promises");
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const isDev = require("electron-is-dev");
+const url = require("url");
 
 ipcMain.handle("pick-file", async (event, arg) => {
   const fileResponse = await dialog.showOpenDialog({
@@ -30,13 +31,24 @@ function createWindow() {
   win.loadURL(
     isDev
       ? "http://localhost:3000"
-      : `file://${path.join(__dirname, "../build/index.html")}`
+      : url.format({
+          protocol: "file:",
+          slashes: true,
+          pathname: path.join(__dirname, "index.html"),
+        })
   );
   // Open the DevTools.
   if (isDev) {
     win.webContents.openDevTools({ mode: "detach" });
   }
 }
+
+// TODO: not working
+app.on("open-file", async (e, path) => {
+  e.preventDefault();
+  const fileBytes = await fs.readFile(path);
+  ipcMain.emit("file-opened", fileBytes);
+});
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
