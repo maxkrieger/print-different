@@ -1,7 +1,6 @@
 const path = require("path");
 const fs = require("fs/promises");
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
-const isDev = require("electron-is-dev");
 const url = require("url");
 
 ipcMain.handle("pick-file", async (event, arg) => {
@@ -29,7 +28,7 @@ function createWindow() {
 
   // and load the index.html of the app.
   win.loadURL(
-    isDev
+    !app.isPackaged
       ? "http://localhost:3000"
       : url.format({
           protocol: "file:",
@@ -38,7 +37,7 @@ function createWindow() {
         })
   );
   // Open the DevTools.
-  if (isDev) {
+  if (!app.isPackaged) {
     win.webContents.openDevTools({ mode: "detach" });
   }
 }

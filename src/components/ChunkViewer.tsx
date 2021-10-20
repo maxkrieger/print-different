@@ -12,7 +12,21 @@ const ChunkViewer = ({
   }
   const chunks = flattenChunks(state.doc!);
   return (
-    <div style={{ height: "100%", overflow: "auto" }}>
+    <div style={{ height: "100%", overflow: "auto", width: "140px" }}>
+      {chunks.length === 0 && (
+        <div
+          style={{
+            height: "100%",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          <div>
+            click and drag on the page to select chunks (this'll be automatic
+            eventually)
+          </div>
+        </div>
+      )}
       {chunks.map((chunk, k) =>
         chunk.chunk.image !== "" ? (
           <div

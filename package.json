@@ -11,12 +11,13 @@
     "appId": "chat.saga.print",
     "files": [
       "build/**/*",
-      "!node_modules/**/*"
+      "!node_modules"
     ],
     "productName": "Print Different",
     "mac": {
       "target": "zip",
-      "icon": "icon.png"
+      "icon": "icon.png",
+      "asar": false
     },
     "linux": {
       "target": "deb",
@@ -31,8 +32,7 @@
     "react-dom": "^17.0.2",
     "react-pdf": "^5.4.0",
     "react-scripts": "4.0.3",
-    "web-vitals": "^1.0.1",
-    "electron-is-dev": "^2.0.0"
+    "web-vitals": "^1.0.1"
   },
   "main": "public/electron.js",
   "scripts": {
@@ -60,20 +60,20 @@
     ]
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^5.11.4",
+    "@testing-library/react": "^11.1.0",
+    "@testing-library/user-event": "^12.1.10",
     "@types/downloadjs": "^1.4.2",
+    "@types/jest": "^26.0.15",
     "@types/mapbox__shelf-pack": "^3.0.1",
+    "@types/node": "^12.0.0",
+    "@types/react": "^17.0.0",
+    "@types/react-dom": "^17.0.0",
     "@types/react-pdf": "^5.0.7",
     "concurrently": "^6.3.0",
     "electron": "^15.1.2",
     "electron-builder": "^22.13.1",
-    "wait-on": "^6.0.0",
     "typescript": "^4.1.2",
-    "@types/jest": "^26.0.15",
-    "@types/node": "^12.0.0",
-    "@types/react": "^17.0.0",
-    "@types/react-dom": "^17.0.0",
-    "@testing-library/jest-dom": "^5.11.4",
-    "@testing-library/react": "^11.1.0",
-    "@testing-library/user-event": "^12.1.10"
+    "wait-on": "^6.0.0"
   }
 }
