@@ -16,8 +16,7 @@
     "productName": "Print Different",
     "mac": {
       "target": "zip",
-      "icon": "icon.png",
-      "asar": false
+      "icon": "icon.png"
     },
     "linux": {
       "target": "deb",

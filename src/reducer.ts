@@ -149,7 +149,9 @@ export const flattenChunks = (doc: Doc): PositionedChunk[] =>
 
 export const PAGE_SIZE = PageSizes.Letter;
 const packBins = (chunks: PositionedChunk[]): PositionedChunk[] => {
-  const pageShelves = [new ShelfPack(PAGE_SIZE[0], PAGE_SIZE[1])];
+  const pageShelves = [
+    new ShelfPack(PAGE_SIZE[0] - PADDING, PAGE_SIZE[1] - PADDING),
+  ];
   for (var i = 0; i < chunks.length; i++) {
     let j = 0;
     let found = false;
@@ -200,7 +202,7 @@ export const generateLayout = async (doc: Doc): Promise<Layout> => {
   const exportedPdf = await PDFDocument.create();
   exportedPdf.catalog.getOrCreateViewerPreferences().setDuplex(Duplex.Simplex);
   exportedPdf.setTitle(`Printing of ${doc.pdfDocument.getTitle()}`);
-  const font = exportedPdf.embedStandardFont(StandardFonts.HelveticaBold);
+  const font = exportedPdf.embedStandardFont(StandardFonts.CourierBold);
   const importedPdf = doc.pdfDocument;
   const chunks = packBins(flattenChunks(doc));
 
@@ -224,11 +226,12 @@ export const generateLayout = async (doc: Doc): Promise<Layout> => {
       page = exportedPdf.addPage(PAGE_SIZE);
       page_idx++;
     }
+    const labelWidth = 7 * chunk.name.length;
     page.drawRectangle({
-      x: chunk.x,
-      y: chunk.y,
-      width: chunk.w + 5 * chunk.name.length + PADDING,
-      height: chunk.h + PADDING,
+      x: chunk.x + PADDING,
+      y: chunk.y + PADDING / 2,
+      width: chunk.w + labelWidth,
+      height: chunk.h,
       opacity: 0,
       borderOpacity: 1,
       borderColor: rgb(0.5, 0.5, 0.5),
@@ -237,19 +240,19 @@ export const generateLayout = async (doc: Doc): Promise<Layout> => {
     page.drawPage(embedded, {
       width: chunk.w,
       height: chunk.h,
-      x: chunk.x,
-      y: chunk.y,
+      x: chunk.x + PADDING,
+      y: chunk.y + PADDING / 2,
     });
     page.drawRectangle({
-      x: chunk.x + chunk.w,
-      y: chunk.y + 5,
-      width: 5 * chunk.name.length,
+      x: chunk.x + chunk.w + PADDING,
+      y: chunk.y + 5 + PADDING / 2,
+      width: labelWidth,
       height: 12,
       color: rgb(0.95, 0.95, 0.95),
     });
     page.drawText(chunk.name, {
-      x: chunk.x + chunk.w,
-      y: chunk.y + 5,
+      x: chunk.x + chunk.w + PADDING,
+      y: chunk.y + 5 + PADDING / 2,
       font,
       size: 12,
       color: rgb(0.4, 0.4, 0.4),
