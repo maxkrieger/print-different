@@ -1,7 +1,8 @@
 {
   "name": "print-different",
   "author": {
-    "name": "Max Krieger"
+    "name": "Max Krieger",
+    "email": "max@a9.io"
   },
   "description": "Slice your pdfs up and spread em around",
   "homepage": "./",
@@ -42,7 +43,7 @@
     "dev": "concurrently -k \"BROWSER=none yarn start\" \"npm:electron\"",
     "electron": "wait-on tcp:3000 && electron .",
     "pack": "electron-builder --dir",
-    "dist": "react-scripts build && electron-builder"
+    "dist": "react-scripts build && electron-builder -ml"
   },
   "eslintConfig": {
     "extends": [
