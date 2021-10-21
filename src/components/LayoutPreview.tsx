@@ -37,6 +37,24 @@ const LayoutPreview = ({
     <div style={{ flex: 1, overflow: "hidden" }}>
       {layout === null && "loading..."}
       <button onClick={onDownloadClick}>download</button>
+      <label>
+        {" "}
+        show borders:{" "}
+        <input
+          type="checkbox"
+          checked={state.doc!.showBorders}
+          onChange={() => dispatch({ kind: "toggle_borders" })}
+        />
+      </label>
+      <label>
+        {" "}
+        show numbers:{" "}
+        <input
+          type="checkbox"
+          checked={state.doc!.showNumbers}
+          onChange={() => dispatch({ kind: "toggle_numbers" })}
+        />
+      </label>
       {layout && (
         <>
           <div>

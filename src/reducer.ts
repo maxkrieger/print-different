@@ -29,6 +29,8 @@ export type Doc = {
   pdfDocument: PDFDocument;
   pages: Page[];
   currentPage: number;
+  showBorders: boolean;
+  showNumbers: boolean;
 };
 
 export type PositionedChunk = {
@@ -61,14 +63,16 @@ export type IState = {
 export type Action =
   | {
       kind: "set_doc";
-      doc: any;
+      doc: Doc;
     }
   | { kind: "set_pagestate"; state: PageState }
   | { kind: "set_index"; index: number }
   | { kind: "add_chunk"; chunk: Chunk }
   | { kind: "update_chunk"; chunk: Chunk; index: number }
   | { kind: "cleanup_empty_boxes" }
-  | { kind: "delete_chunk"; index: number };
+  | { kind: "delete_chunk"; index: number }
+  | { kind: "toggle_borders" }
+  | { kind: "toggle_numbers" };
 
 export const processFile = async (fileBytes: Buffer, dispatch: Dispatch) => {
   dispatch({ kind: "set_pagestate", state: PageState.Loading });
@@ -96,7 +100,13 @@ export const processFile = async (fileBytes: Buffer, dispatch: Dispatch) => {
   canvas.remove();
   dispatch({
     kind: "set_doc",
-    doc: { pdfDocument, pages, currentPage: 0 },
+    doc: {
+      pdfDocument,
+      pages,
+      currentPage: 0,
+      showBorders: true,
+      showNumbers: true,
+    },
   });
   dispatch({ kind: "set_pagestate", state: PageState.Viewing });
 };
@@ -226,43 +236,57 @@ export const generateLayout = async (doc: Doc): Promise<Layout> => {
       page = exportedPdf.addPage(PAGE_SIZE);
       page_idx++;
     }
-    const labelWidth = 7 * chunk.name.length;
-    page.drawRectangle({
-      x: chunk.x + PADDING,
-      y: chunk.y + PADDING / 2,
-      width: chunk.w + labelWidth,
-      height: chunk.h,
-      opacity: 0,
-      borderOpacity: 1,
-      borderColor: rgb(0.5, 0.5, 0.5),
-      borderWidth: 1,
-    });
+    const labelWidth = doc.showNumbers ? 7 * chunk.name.length : 0;
+    if (doc.showBorders) {
+      page.drawRectangle({
+        x: chunk.x + PADDING,
+        y: chunk.y + PADDING / 2,
+        width: chunk.w + labelWidth,
+        height: chunk.h,
+        opacity: 0,
+        borderOpacity: 1,
+        borderColor: rgb(0.5, 0.5, 0.5),
+        borderWidth: 1,
+      });
+    }
     page.drawPage(embedded, {
       width: chunk.w,
       height: chunk.h,
       x: chunk.x + PADDING,
       y: chunk.y + PADDING / 2,
     });
-    page.drawRectangle({
-      x: chunk.x + chunk.w + PADDING,
-      y: chunk.y + 5 + PADDING / 2,
-      width: labelWidth,
-      height: 12,
-      color: rgb(0.95, 0.95, 0.95),
-    });
-    page.drawText(chunk.name, {
-      x: chunk.x + chunk.w + PADDING,
-      y: chunk.y + 5 + PADDING / 2,
-      font,
-      size: 12,
-      color: rgb(0.4, 0.4, 0.4),
-    });
+    if (doc.showNumbers) {
+      page.drawRectangle({
+        x: chunk.x + chunk.w + PADDING,
+        y: chunk.y + 5 + PADDING / 2,
+        width: labelWidth,
+        height: 12,
+        color: rgb(0.95, 0.95, 0.95),
+      });
+      page.drawText(chunk.name, {
+        x: chunk.x + chunk.w + PADDING,
+        y: chunk.y + 5 + PADDING / 2,
+        font,
+        size: 12,
+        color: rgb(0.4, 0.4, 0.4),
+      });
+    }
   }
   return { positionedChunks: chunks, document: exportedPdf };
 };
 
 export const reducer = (state: IState, action: Action): IState => {
   switch (action.kind) {
+    case "toggle_borders":
+      return {
+        ...state,
+        doc: { ...state.doc!, showBorders: !state.doc!.showBorders },
+      };
+    case "toggle_numbers":
+      return {
+        ...state,
+        doc: { ...state.doc!, showNumbers: !state.doc!.showNumbers },
+      };
     case "set_doc":
       return {
         ...state,
