@@ -31,7 +31,13 @@ const ChunkViewer = ({
         chunk.chunk.image !== "" ? (
           <div
             key={`chunk-${k}`}
-            onClick={() => dispatch({ kind: "set_index", index: chunk.page })}
+            onClick={() =>
+              dispatch({
+                kind: "set_index",
+                pageIndex: chunk.page,
+                chunkIndex: chunk.chunkIndex,
+              })
+            }
             style={{
               margin: "20px",
               cursor: "pointer",
@@ -48,7 +54,11 @@ const ChunkViewer = ({
                 color: "white",
                 fontWeight: "bold",
                 padding: "2px",
-                backgroundColor: "rgba(0,0,0,0.5)",
+                backgroundColor:
+                  chunk.page === state.doc!.currentPage &&
+                  chunk.chunkIndex === state.doc!.currentChunk
+                    ? "#1c49ff7f"
+                    : "rgba(0,0,0,0.5)",
                 borderRadius: "5px",
               }}
             >

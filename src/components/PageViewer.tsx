@@ -18,7 +18,6 @@ const PageViewer = ({
   dispatch: Dispatch;
 }) => {
   const svgNode = useRef<SVGSVGElement | null>(null);
-  const currentChunk = useRef<number | null>(null);
   const [dragMode, setDragMode] = useState<ChunkState>(ChunkState.None);
   const [initialCoords, setInitialCoords] = useState<[number, number]>([0, 0]);
   const [offset, setOffset] = useState<[number, number]>([0, 0]);
@@ -34,13 +33,14 @@ const PageViewer = ({
     },
     [svgNode, state]
   );
+  const currentChunk = state.doc!.currentChunk;
   const onDragChunk = useCallback(
     ({ clientX, clientY }) => {
-      if (currentChunk.current === null || dragMode === ChunkState.None) {
+      if (currentChunk === -1 || dragMode === ChunkState.None) {
         return;
       }
       const currentPage = state.doc!.pages[state.doc!.currentPage];
-      const currentChunkData = currentPage.chunks[currentChunk.current];
+      const currentChunkData = currentPage.chunks[currentChunk];
       const [x, y] = fixCoords(clientX, clientY);
       const chunk = { ...currentChunkData };
 
@@ -63,7 +63,7 @@ const PageViewer = ({
       }
       dispatch({
         kind: "update_chunk",
-        index: currentChunk.current,
+        index: currentChunk,
         chunk,
       });
     },
@@ -72,12 +72,10 @@ const PageViewer = ({
   const doneDragging = useCallback(() => {
     setDragMode(ChunkState.None);
     dispatch({ kind: "cleanup_empty_boxes" });
-    if (currentChunk.current !== null) {
+    if (currentChunk !== -1) {
       (async () => {
         const newChunk = {
-          ...state.doc!.pages[state.doc!.currentPage].chunks[
-            currentChunk.current!
-          ],
+          ...state.doc!.pages[state.doc!.currentPage].chunks[currentChunk],
         };
         newChunk.image = await chunkCoordsToImage(
           newChunk,
@@ -86,27 +84,35 @@ const PageViewer = ({
         dispatch({
           kind: "update_chunk",
           chunk: newChunk,
-          index: currentChunk.current!,
+          index: currentChunk,
         });
       })();
     }
-  }, [dispatch, state]);
+  }, [dispatch, state, currentChunk]);
   const onDragExistingChunk = useCallback(
     (chunkIndex: number, { clientX, clientY }) => {
       const chunk = state.doc!.pages[state.doc!.currentPage].chunks[chunkIndex];
-      currentChunk.current = chunkIndex;
+      dispatch({
+        kind: "set_index",
+        pageIndex: state.doc!.currentPage,
+        chunkIndex,
+      });
       setDragMode(ChunkState.Move);
       const [x, y] = fixCoords(clientX, clientY);
       setOffset([x - chunk.x, y - chunk.y]);
     },
-    [fixCoords, state]
+    [fixCoords, state, dispatch]
   );
   //   TODO: https://developer.mozilla.org/en-US/docs/Web/API/Element/setPointerCapture
   const onStartNewChunk = useCallback(
     ({ clientX, clientY }) => {
       const currentPage = state.doc!.pages[state.doc!.currentPage];
       const [x, y] = fixCoords(clientX, clientY);
-      currentChunk.current = currentPage.chunks.length;
+      dispatch({
+        kind: "set_index",
+        pageIndex: state.doc!.currentPage,
+        chunkIndex: currentPage.chunks.length,
+      });
       setInitialCoords([x, y]);
       dispatch({
         kind: "add_chunk",
@@ -125,7 +131,11 @@ const PageViewer = ({
   const onResizeExistingChunk = useCallback(
     (direction: ChunkState, k: number, e) => {
       const chunk = state.doc!.pages[state.doc!.currentPage].chunks[k];
-      currentChunk.current = k;
+      dispatch({
+        kind: "set_index",
+        pageIndex: state.doc!.currentPage,
+        chunkIndex: k,
+      });
       if (direction === ChunkState.SE) {
         setInitialCoords([chunk.x, chunk.y]);
       } else if (direction === ChunkState.NW) {
@@ -137,18 +147,26 @@ const PageViewer = ({
       }
       setDragMode(direction);
     },
-    [state]
+    [state, dispatch]
   );
   const onKey = useCallback(
     (e) => {
       if (e.key === "Escape") {
-        currentChunk.current = null;
+        dispatch({
+          kind: "set_index",
+          pageIndex: state.doc!.currentPage,
+          chunkIndex: -1,
+        });
         doneDragging();
       } else if (e.key === "Delete" || e.key === "Backspace") {
-        if (currentChunk.current !== null) {
-          dispatch({ kind: "delete_chunk", index: currentChunk.current });
+        if (currentChunk !== -1) {
+          dispatch({ kind: "delete_chunk", index: currentChunk });
         }
-        currentChunk.current = null;
+        dispatch({
+          kind: "set_index",
+          pageIndex: state.doc!.currentPage,
+          chunkIndex: -1,
+        });
         doneDragging();
       }
     },
@@ -160,9 +178,6 @@ const PageViewer = ({
       window.removeEventListener("keydown", onKey);
     };
   }, [onKey]);
-  useEffect(() => {
-    currentChunk.current = null;
-  }, [state.doc?.currentPage]);
   if (!state.doc || state.doc.pages.length <= state.doc.currentPage) {
     return null;
   }
@@ -194,11 +209,11 @@ const PageViewer = ({
               fillOpacity={0.5}
               stroke={"orange"}
               strokeOpacity={0.8}
-              strokeWidth={currentChunk.current === k ? 4 : 0}
+              strokeWidth={currentChunk === k ? 4 : 0}
               onMouseDown={(e) => onDragExistingChunk(k, e)}
               style={{ cursor: "grab" }}
             />
-            {currentChunk.current === k && (
+            {currentChunk === k && (
               <>
                 <rect
                   style={{ cursor: "nw-resize" }}

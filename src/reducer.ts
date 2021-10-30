@@ -29,6 +29,7 @@ export type Doc = {
   pdfDocument: PDFDocument;
   pages: Page[];
   currentPage: number;
+  currentChunk: number;
   showBorders: boolean;
   showNumbers: boolean;
 };
@@ -41,6 +42,7 @@ export type PositionedChunk = {
   h: number;
   name: string;
   page: number;
+  chunkIndex: number;
   new_page: number;
 };
 export type Layout = {
@@ -66,7 +68,7 @@ export type Action =
       doc: Doc;
     }
   | { kind: "set_pagestate"; state: PageState }
-  | { kind: "set_index"; index: number }
+  | { kind: "set_index"; pageIndex: number; chunkIndex: number }
   | { kind: "add_chunk"; chunk: Chunk }
   | { kind: "update_chunk"; chunk: Chunk; index: number }
   | { kind: "cleanup_empty_boxes" }
@@ -104,6 +106,7 @@ export const processFile = async (fileBytes: Buffer, dispatch: Dispatch) => {
       pdfDocument,
       pages,
       currentPage: 0,
+      currentChunk: -1,
       showBorders: true,
       showNumbers: true,
     },
@@ -142,17 +145,23 @@ export type Dispatch = React.Dispatch<Action>;
 export const flattenChunks = (doc: Doc): PositionedChunk[] =>
   doc.pages
     .map((page, idx) => {
-      const chunks = page.chunks.slice();
-      chunks.sort((a, b) => a.x + a.y - (b.x + b.y));
-      return chunks.map((chunk, idx2) => ({
+      const chunks = page.chunks.slice().map((chunk, idx2) => ({
         page: idx,
         new_page: 0,
-        name: `${idx}.${idx2}`,
+        name: ``,
         x: 0,
         y: 0,
         w: chunk.w,
         h: chunk.h,
+        chunkIndex: idx2,
         chunk,
+      }));
+      chunks.sort(
+        (a, b) => a.chunk.x ** 1.2 + a.chunk.y - (b.chunk.x ** 1.2 + b.chunk.y)
+      );
+      return chunks.map((chunk, idx2) => ({
+        ...chunk,
+        name: `${idx}.${idx2}`,
       }));
     })
     .flat();
@@ -295,7 +304,14 @@ export const reducer = (state: IState, action: Action): IState => {
     case "set_pagestate":
       return { ...state, pageState: action.state };
     case "set_index":
-      return { ...state, doc: { ...state.doc!, currentPage: action.index } };
+      return {
+        ...state,
+        doc: {
+          ...state.doc!,
+          currentPage: action.pageIndex,
+          currentChunk: action.chunkIndex,
+        },
+      };
     case "add_chunk":
       const newAddPages = [...state.doc!.pages];
       newAddPages[state.doc!.currentPage].chunks.push(action.chunk);

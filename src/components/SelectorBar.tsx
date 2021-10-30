@@ -12,7 +12,8 @@ const SelectorBar = ({
     (index: number) => {
       dispatch({
         kind: "set_index",
-        index,
+        pageIndex: index,
+        chunkIndex: -1,
       });
     },
     [dispatch]
