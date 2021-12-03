@@ -43,7 +43,7 @@
     "dev": "concurrently -k \"BROWSER=none yarn start\" \"npm:electron\"",
     "electron": "wait-on tcp:3000 && electron .",
     "pack": "electron-builder --dir",
-    "dist": "react-scripts build && electron-builder -ml"
+    "dist": "react-scripts build && electron-builder -ml --universal"
   },
   "eslintConfig": {
     "extends": [
